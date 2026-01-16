@@ -1,19 +1,5 @@
 {
   "Routes": [
-    {
-      "DownstreamPathTemplate": "/api/Values/{name}", //destination URL, if action define with [HttpGET("{para}")] then use, action/paramater in destination URL
-      "DownstreamScheme": "http", //used protocol in routing
-      "DownstreamHostAndPorts": [ //ports mapping prefer to use mapping ports into catalog.api
-        {
-          "Host": "localhost",
-          "Port": "7000"
-        }
-      ],
-
-      "UpstreamPathTemplate": "/Values/{name}", // source URL from browser define params as action/param
-      "UpstreamHttpMethod": [ "GET" ] //methods
-    },
-
     //catalog Api microservice for api url as:=>  �/api/v1/catalog�
     {
       "DownstreamPathTemplate": "/api/v1/Catalog",

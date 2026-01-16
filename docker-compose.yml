@@ -1,54 +1,135 @@
-version: '3.4'
+version: '3.8'
 
 services:
-
-  catalogMongoDbService:                     
-    image: mongo                  
-    
-  basketRedisDbService:
-    image: redis
-
-  rabbitMQService:
-    image: rabbitmq:3-management
-
-  orderSqlDbService:
-    image: mcr.microsoft.com/mssql/server:2019-latest
-    
-
-  catalog.api:
-    image: ${DOCKER_REGISTRY-}catalogapi
+  catalog-api:
+    image: ${DOCKER_REGISTRY:-}catalog-api:${IMAGE_TAG:-latest}
     build:
       context: .
-      dockerfile: src/catalog/Catalog.API/Dockerfile
-    depends_on: 
-      - catalogMongoDbService
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/catalog/Catalog.API
+        PROJECT_NAME: Catalog.API
+    container_name: catalog-api
+    ports:
+      - "8001:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - MONGODB_CONNECTION=${MONGODB_CONNECTION:-mongodb://host.docker.internal:27017}
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
-  basketapi:
-    image: ${DOCKER_REGISTRY-}basketapi
+  basket-api:
+    image: ${DOCKER_REGISTRY:-}basket-api:${IMAGE_TAG:-latest}
     build:
       context: .
-      dockerfile: src/Basket/BasketAPI/Dockerfile
-    depends_on:
-      - basketRedisDbService
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/Basket/BasketAPI
+        PROJECT_NAME: BasketAPI
+    container_name: basket-api
+    ports:
+      - "8002:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - REDIS_HOST=${REDIS_HOST:-host.docker.internal:6379}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-host.docker.internal}
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
-
-  ordering.api:
-    image: ${DOCKER_REGISTRY-}orderingapi
+  ordering-api:
+    image: ${DOCKER_REGISTRY:-}ordering-api:${IMAGE_TAG:-latest}
     build:
       context: .
-      dockerfile: src/Ordering/Ordering/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/Ordering/Ordering
+        PROJECT_NAME: Ordering.API
+    container_name: ordering-api
+    ports:
+      - "8003:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - SQL_SERVER_HOST=${SQL_SERVER_HOST:-host.docker.internal}
+      - SQL_SERVER_PORT=${SQL_SERVER_PORT:-1433}
+      - SQL_SERVER_USER=${SQL_SERVER_USER:-sa}
+      - SQL_SERVER_PASSWORD=${SQL_SERVER_PASSWORD:-P@ssword123}
+      - RABBITMQ_HOST=${RABBITMQ_HOST:-host.docker.internal}
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
-
-  ocelotApiGateway:
-    image: ${DOCKER_REGISTRY-}apigateway
+  api-gateway:
+    image: ${DOCKER_REGISTRY:-}api-gateway:${IMAGE_TAG:-latest}
     build:
       context: .
-      dockerfile: src/ApiGateway/ApiGateway/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/ApiGateway/ApiGateway
+        PROJECT_NAME: ApiGateway
+    container_name: api-gateway
+    ports:
+      - "7000:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
-
-  aspnetrunbasics:
-    image: ${DOCKER_REGISTRY-}aspnetrunbasics
+  ui-layer:
+    image: ${DOCKER_REGISTRY:-}ui-layer:${IMAGE_TAG:-latest}
     build:
       context: .
-      dockerfile: src/UI_Layer/Dockerfile
+      dockerfile: Dockerfile
+      args:
+        PROJECT_PATH: src/UI_Layer
+        PROJECT_NAME: AspnetRunBasics
+    container_name: ui-layer
+    ports:
+      - "8000:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - API_GATEWAY_URL=${API_GATEWAY_URL:-http://api-gateway:80/}
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
+networks:
+  microservices-network:
+    driver: bridge
