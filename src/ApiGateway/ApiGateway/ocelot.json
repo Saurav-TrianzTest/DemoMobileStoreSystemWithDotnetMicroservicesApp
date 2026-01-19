@@ -5,8 +5,8 @@
       "DownstreamScheme": "http", //used protocol in routing
       "DownstreamHostAndPorts": [ //ports mapping prefer to use mapping ports into catalog.api
         {
-          "Host": "localhost",
-          "Port": "7000"
+          "Host": "catalog.api",
+          "Port": "80"
         }
       ],
 

@@ -1,54 +1,41 @@
-version: '3.4'
+version: '3.8'
 
 services:
-
-  catalogMongoDbService:                     
-    image: mongo                  
-    
-  basketRedisDbService:
-    image: redis
-
-  rabbitMQService:
-    image: rabbitmq:3-management
-
-  orderSqlDbService:
-    image: mcr.microsoft.com/mssql/server:2019-latest
-    
-
-  catalog.api:
-    image: ${DOCKER_REGISTRY-}catalogapi
+  dmstcont-app:
     build:
       context: .
-      dockerfile: src/catalog/Catalog.API/Dockerfile
-    depends_on: 
-      - catalogMongoDbService
+      dockerfile: Dockerfile
+    image: dmstcont:latest
+    container_name: dmstcont-app
+    ports:
+      - "80:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - TZ=UTC
+      # Database connection (replace with actual values)
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_STRING:-Server=host.docker.internal;Database=dmstcont;User Id=sa;Password=YourPassword123;}
+      # External service endpoints
+      - REDIS_HOST=${REDIS_HOST:-host.docker.internal}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - KAFKA_BROKER=${KAFKA_BROKER:-host.docker.internal:9092}
+    volumes:
+      - ./logs:/app/logs
+      - ./appsettings:/app/appsettings:ro
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
-  basketapi:
-    image: ${DOCKER_REGISTRY-}basketapi
-    build:
-      context: .
-      dockerfile: src/Basket/BasketAPI/Dockerfile
-    depends_on:
-      - basketRedisDbService
+networks:
+  app-network:
+    driver: bridge
 
-
-  ordering.api:
-    image: ${DOCKER_REGISTRY-}orderingapi
-    build:
-      context: .
-      dockerfile: src/Ordering/Ordering/Dockerfile
-
-
-  ocelotApiGateway:
-    image: ${DOCKER_REGISTRY-}apigateway
-    build:
-      context: .
-      dockerfile: src/ApiGateway/ApiGateway/Dockerfile
-
-
-  aspnetrunbasics:
-    image: ${DOCKER_REGISTRY-}aspnetrunbasics
-    build:
-      context: .
-      dockerfile: src/UI_Layer/Dockerfile
-
+volumes:
+  logs:
+  appsettings:

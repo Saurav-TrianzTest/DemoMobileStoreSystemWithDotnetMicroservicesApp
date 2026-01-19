@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using System;
 using UI_Layer.ApiCollection.Interfaces;
 using UI_Layer.AppSettings;
 
@@ -51,7 +52,11 @@ namespace AspnetRunBasics
                 app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
+            // Conditional HTTPS redirection - disabled in container environments
+            if (!env.IsDevelopment() || string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISABLE_HTTPS_REDIRECT")))
+            {
+                app.UseHttpsRedirection();
+            }
             app.UseStaticFiles();
 
             app.UseRouting();

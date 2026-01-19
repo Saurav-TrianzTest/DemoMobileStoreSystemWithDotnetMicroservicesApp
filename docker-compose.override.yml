@@ -5,7 +5,7 @@ services:
     container_name: catalogMongoContainer
     restart: always
     volumes:
-        - ${WEPAPP_STORAGE_HOME}/site:/data/db
+        - mongodb_data:/data/db
     ports:
         - "27017:27017"
   
@@ -28,7 +28,7 @@ services:
     ports:
         - "1433:1433"
     environment:
-        SA_PASSWORD: "P@ssword123"
+        SA_PASSWORD: "${DB_PASSWORD:-P@ssword123}"
         ACCEPT_EULA: "Y"
 
 
@@ -37,11 +37,11 @@ services:
     environment:
         - ASPNETCORE_ENVIRONMENT=Development
         - "CatalogDatabaseSettings:ConnectionString=mongodb://catalogMongoContainer:27017"
-    depends_on: 
+    depends_on:
         - catalogMongoDbService
     volumes:
-        - ${HOME}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
-    ports: 
+        - catalog_secrets:/root/.microsoft/usersecrets
+    ports:
         - "8000:80"
 
   basketapi:
@@ -51,7 +51,7 @@ services:
       - "ConnectionStrings:Redis=aspnetrun-redisDb:6379"
       - "EventBus:HostName=rabbitMQContainer"
     volumes:
-      - ${HOME}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
+      - basket_secrets:/root/.microsoft/usersecrets
     ports:
       - "8001:80"
     depends_on:
@@ -64,7 +64,7 @@ services:
     restart: on-failure
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - "ConnectionStrings:defaultConnection=Server=orderSqlDbContainer;database=OrderDb; User Id=sa; Password=P@ssword123;"
+      - "ConnectionStrings:defaultConnection=Server=orderSqlDbContainer;database=OrderDb; User Id=sa; Password=${DB_PASSWORD:-P@ssword123};"
       - "EventBus:HostName=rabbitMQContainer"
     ports:
       - "8002:80"
@@ -81,7 +81,7 @@ services:
       - basketapi
       - catalog.api
     volumes:
-      - ${HOME}/.microsoft/usersecrets/:/root/.microsoft/usersecrets
+      - gateway_secrets:/root/.microsoft/usersecrets
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
     ports:
@@ -100,5 +100,13 @@ services:
     ports:
       - "8003:80"
     volumes:
-      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
-      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+      - ui_secrets:/root/.microsoft/usersecrets:ro
+      - ui_https:/root/.aspnet/https:ro
+
+volumes:
+  mongodb_data:
+  catalog_secrets:
+  basket_secrets:
+  gateway_secrets:
+  ui_secrets:
+  ui_https:
